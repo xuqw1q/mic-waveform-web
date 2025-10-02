@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mic Waveform · 实时波形/频谱 · 可调时间窗（Web版）</title>
   <!-- Plotly CDN -->
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" defer></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
     :root { --bg:#0f172a; --panel:#111827; --text:#e5e7eb; --muted:#94a3b8; --accent:#22d3ee; }
     html, body { height:100%; }
@@ -123,19 +123,28 @@
   }
 
   // ===== Plot setup =====
-  const timeLayout = {
-    margin:{l:50,r:15,t:20,b:40}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
-    xaxis:{ title:'Time (s)', zeroline:false, gridcolor:'rgba(255,255,255,0.1)' },
-    yaxis:{ title:'Amplitude', zeroline:false, gridcolor:'rgba(255,255,255,0.1)', range:[-1,1] },
-  };
-  const freqLayout = {
-    margin:{l:60,r:15,t:20,b:40}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
-    xaxis:{ title:'Frequency (Hz)', zeroline:false, gridcolor:'rgba(255,255,255,0.1)' },
-    yaxis:{ title:'Magnitude (dB)', zeroline:false, gridcolor:'rgba(255,255,255,0.1)' },
-  };
+  function initPlots(){
+    const timeLayout = {
+      margin:{l:50,r:15,t:20,b:40}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+      xaxis:{ title:'Time (s)', zeroline:false, gridcolor:'rgba(255,255,255,0.1)' },
+      yaxis:{ title:'Amplitude', zeroline:false, gridcolor:'rgba(255,255,255,0.1)', range:[-1,1] },
+    };
+    const freqLayout = {
+      margin:{l:60,r:15,t:20,b:40}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+      xaxis:{ title:'Frequency (Hz)', zeroline:false, gridcolor:'rgba(255,255,255,0.1)' },
+      yaxis:{ title:'Magnitude (dB)', zeroline:false, gridcolor:'rgba(255,255,255,0.1)' },
+    };
 
-  Plotly.newPlot('timePlot', [{x:[0,1], y:[0,0], mode:'lines'}], timeLayout, {displayModeBar:false});
-  Plotly.newPlot('freqPlot', [{x:[0,1], y:[0,0], mode:'lines'}], freqLayout, {displayModeBar:false});
+    Plotly.newPlot('timePlot', [{x:[0,1], y:[0,0], mode:'lines'}], timeLayout, {displayModeBar:false});
+    Plotly.newPlot('freqPlot', [{x:[0,1], y:[0,0], mode:'lines'}], freqLayout, {displayModeBar:false});
+  }
+
+  function ensurePlotsReady(){
+    if(window.Plotly){ initPlots(); return; }
+    window.addEventListener('load', ()=>{ initPlots(); });
+  }
+
+  ensurePlotsReady();
 
   function updateTimePlot(){
     const y = getOrderedBuffer();
@@ -178,6 +187,7 @@
     try{
       mediaStream = await navigator.mediaDevices.getUserMedia({audio:true});
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      await audioCtx.resume();
       sampleRate = audioCtx.sampleRate;
 
       // resize ring for current sampleRate
@@ -190,16 +200,29 @@
       analyser.smoothingTimeConstant = 0.6; // mild smoothing
 
       // A processor to fetch time-domain PCM for our own ring buffer
-      const proc = audioCtx.createScriptProcessor(2048, 1, 1);
-      micSource.connect(proc);
-      proc.connect(audioCtx.destination); // required in some browsers
-      micSource.connect(analyser);
-
-      proc.onaudioprocess = (ev)=>{
-        const ch = ev.inputBuffer.getChannelData(0);
-        // Copy to avoid referencing the same buffer next callback
-        writeRing(new Float32Array(ch));
-      };
+      const proc = audioCtx.createScriptProcessor ? audioCtx.createScriptProcessor(2048, 1, 1) : null;
+      if(proc){
+        micSource.connect(proc);
+        proc.connect(audioCtx.destination); // required in some browsers
+        micSource.connect(analyser);
+        proc.onaudioprocess = (ev)=>{
+          const ch = ev.inputBuffer.getChannelData(0);
+          writeRing(new Float32Array(ch));
+        };
+      } else {
+        // Fallback: use getUserMedia + analyser.getFloatTimeDomainData in RAF loop
+        micSource.connect(analyser);
+        setInterval(()=>{
+          const td = new Float32Array(analyser.fftSize);
+          if(analyser.getFloatTimeDomainData){
+            analyser.getFloatTimeDomainData(td);
+          }else{
+            const u8 = new Uint8Array(analyser.fftSize); analyser.getByteTimeDomainData(u8);
+            for(let i=0;i<u8.length;i++) td[i] = (u8[i]-128)/128;
+          }
+          writeRing(td);
+        }, 16);
+      }
 
       running = true;
       document.getElementById('btnStart').disabled = true;
