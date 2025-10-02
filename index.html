@@ -90,14 +90,17 @@
   let ring = new Float32Array(48000 * 0.05); // default 50 ms
   let writePtr = 0, filled = false;
 
-  function setWindowSec(sec){
-    const newN = Math.max(1, Math.floor(sec * sampleRate));
-    const old = getOrderedBuffer();
-    const keep = old.slice(Math.max(0, old.length - newN));
-    ring = new Float32Array(newN);
-    ring.set(keep, newN - keep.length);
-    writePtr = newN; filled = (keep.length === newN);
-  }
+function setWindowSec(sec){
+  const newN = Math.max(1, Math.floor(sec * sampleRate));
+  const old = getOrderedBuffer();
+  const keep = old.slice(Math.max(0, old.length - newN));
+  ring = new Float32Array(newN);
+  ring.set(keep, newN - keep.length);
+  // 修正：指向已有数据长度，而不是 newN
+  writePtr = keep.length;
+  filled = (keep.length === newN);
+}
+
 
   function writeRing(data){
     const N = ring.length;
@@ -201,7 +204,10 @@
       analyser.smoothingTimeConstant = 0.6; // mild smoothing
 
       // A processor to fetch time-domain PCM for our own ring buffer
-      const proc = audioCtx.createScriptProcessor ? audioCtx.createScriptProcessor(2048, 1, 1) : null;
+      // 原：const proc = audioCtx.createScriptProcessor ? audioCtx.createScriptProcessor(2048, 1, 1) : null;
+      const proc = audioCtx.createScriptProcessor ? audioCtx.createScriptProcessor(512, 1, 1) : null;
+      // 或 256，如果设备稳定：
+
       if(proc){
         micSource.connect(proc);
         proc.connect(audioCtx.destination); // required in some browsers
