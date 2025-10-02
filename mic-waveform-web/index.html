@@ -1,34 +1,249 @@
 <!doctype html>
 <html lang="zh-CN">
-<meta charset="utf-8">
-<title>index.html</title>
-<style>body{max-width:70ch;margin:3rem auto;line-height:1.7}</style>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mic Waveform · 实时波形/频谱 · 可调时间窗（Web版）</title>
+  <!-- Plotly CDN -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" defer></script>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --text:#e5e7eb; --muted:#94a3b8; --accent:#22d3ee; }
+    html, body { height:100%; }
+    body {
+      margin:0; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    .wrap { max-width:1100px; margin:0 auto; padding:18px; }
+    .title { font-size:20px; font-weight:700; letter-spacing:0.2px; display:flex; align-items:center; gap:10px; }
+    .title small { color:var(--muted); font-weight:500; }
+    .bar {
+      margin-top:14px; background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:12px 14px;
+      display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    label { color:var(--muted); font-size:14px; }
+    select, button {
+      background:#0b1324; color:var(--text); border:1px solid rgba(255,255,255,0.12);
+      border-radius:10px; padding:8px 10px; font-size:14px;
+    }
+    button.primary { background:linear-gradient(180deg,#0ea5e9,#06b6d4); border:none; color:white; font-weight:600; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+    .grid { margin-top:16px; display:grid; grid-template-columns:1fr; gap:16px; }
+    @media (min-width: 900px) { .grid { grid-template-columns:1fr 1fr; } }
+    .card {
+      background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:10px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    .meta { margin-top:8px; font-size:12px; color:var(--muted); }
+    .footer { margin-top:16px; color:var(--muted); font-size:12px; }
+    .warn { color:#fca5a5; }
+  </style>
+</head>
 <body>
-<p>&lt;!DOCTYPE html&gt;<br>&lt;html lang=&quot;zh-CN&quot;&gt;<br>&lt;head&gt;<br>  &lt;meta charset=&quot;utf-8&quot; /&gt;<br>  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot; /&gt;<br>  &lt;title&gt;Mic Waveform · Web 实时波形/频谱&lt;/title&gt;<br>  &lt;style&gt;<br>    :root {<br>      --bg: #0b0e11;<br>      --panel: #12161a;<br>      --text: #dfe6ee;<br>      --muted: #8894a3;<br>      --accent: #8ab4ff;<br>      --grid: #22303c;<br>      --border: #1b2229;<br>    }<br>    * { box-sizing: border-box; }<br>    body {<br>      margin: 0; background: var(--bg); color: var(--text);<br>      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, PingFang SC, Noto Sans SC, &quot;Microsoft YaHei&quot;, sans-serif;<br>    }<br>    header {<br>      padding: 16px 20px; border-bottom: 1px solid var(--border);<br>      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;<br>      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));<br>    }<br>    h1 { font-size: 18px; margin: 0; font-weight: 600; letter-spacing: .2px; }<br>    .tag { color: var(--muted); font-size: 12px; }<br>    .spacer { flex: 1; }<br>    .ctrl {<br>      display: inline-flex; align-items: center; gap: 8px; background: var(--panel);<br>      border: 1px solid var(--border); padding: 8px 10px; border-radius: 12px;<br>    }<br>    select, button {<br>      background: #0e1318; color: var(--text); border: 1px solid var(--border);<br>      padding: 8px 10px; border-radius: 10px; font-size: 14px;<br>    }<br>    button { cursor: pointer; }<br>    button[disabled] { opacity: .6; cursor: not-allowed; }</p>
-<p>    main { padding: 16px; display: grid; gap: 16px; grid-template-columns: 1fr; }<br>    .card {<br>      background: var(--panel); border: 1px solid var(--border); border-radius: 16px;<br>      padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.25);<br>    }<br>    .card h2 { margin: 6px 6px 10px; font-size: 14px; color: var(--muted); font-weight: 600; }<br>    .canvas-wrap { position: relative; height: 46vh; max-height: 520px; min-height: 260px; }<br>    canvas { width: 100%; height: 100%; display: block; border-radius: 12px; background: #0a0f14; }<br>    .status { padding: 10px 16px; font-size: 12px; color: var(--muted); }<br>    footer { padding: 10px 16px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); }<br>    @media (min-width: 1100px) { main { grid-template-columns: 1fr 1fr; } }<br>  &lt;/style&gt;<br>&lt;/head&gt;<br>&lt;body&gt;<br>  &lt;header&gt;<br>    &lt;div&gt;<br>      &lt;h1&gt;Mic Waveform · Web&lt;/h1&gt;<br>      &lt;div class=&quot;tag&quot;&gt;实时波形 / 频谱 · 可调时间窗 · 浏览器端&lt;/div&gt;<br>    &lt;/div&gt;<br>    &lt;div class=&quot;spacer&quot;&gt;&lt;/div&gt;<br>    &lt;div class=&quot;ctrl&quot;&gt;<br>      &lt;label for=&quot;win&quot;&gt;时间窗&lt;/label&gt;<br>      &lt;select id=&quot;win&quot;&gt;<br>        &lt;option value=&quot;0.020&quot;&gt;20 ms&lt;/option&gt;<br>        &lt;option value=&quot;0.050&quot; selected&gt;50 ms&lt;/option&gt;<br>        &lt;option value=&quot;0.100&quot;&gt;100 ms&lt;/option&gt;<br>        &lt;option value=&quot;0.200&quot;&gt;200 ms&lt;/option&gt;<br>        &lt;option value=&quot;0.500&quot;&gt;500 ms&lt;/option&gt;<br>        &lt;option value=&quot;1&quot;&gt;1 s&lt;/option&gt;<br>        &lt;option value=&quot;2&quot;&gt;2 s&lt;/option&gt;<br>        &lt;option value=&quot;5&quot;&gt;5 s&lt;/option&gt;<br>      &lt;/select&gt;<br>      &lt;button id=&quot;btn&quot;&gt;开始采集&lt;/button&gt;<br>    &lt;/div&gt;<br>  &lt;/header&gt;</p>
-<p>  &lt;main&gt;<br>    &lt;section class=&quot;card&quot;&gt;<br>      &lt;h2&gt;时间域 · Waveform&lt;/h2&gt;<br>      &lt;div class=&quot;canvas-wrap&quot;&gt;&lt;canvas id=&quot;cWave&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;<br>    &lt;/section&gt;<br>    &lt;section class=&quot;card&quot;&gt;<br>      &lt;h2&gt;频率域 · Spectrum&lt;/h2&gt;<br>      &lt;div class=&quot;canvas-wrap&quot;&gt;&lt;canvas id=&quot;cSpec&quot;&gt;&lt;/canvas&gt;&lt;/div&gt;<br>    &lt;/section&gt;<br>  &lt;/main&gt;</p>
-<p>  &lt;div class=&quot;status&quot; id=&quot;status&quot;&gt;状态：就绪。提示：麦克风需要 HTTPS 或 localhost。&lt;/div&gt;<br>  &lt;footer&gt;<br>    提醒：首次启动需要点击“开始采集”并允许麦克风权限；如无声，检查系统输入设备是否正确、浏览器是否被静音。<br>  &lt;/footer&gt;</p>
-<p>&lt;script&gt;<br>(() =&gt; {<br>  const el = (id) =&gt; document.getElementById(id);<br>  const $btn = el(&#x27;btn&#x27;);<br>  const $win = el(&#x27;win&#x27;);<br>  const $status = el(&#x27;status&#x27;);<br>  const $cWave = el(&#x27;cWave&#x27;);<br>  const $cSpec = el(&#x27;cSpec&#x27;);<br>  const gw = $cWave.getContext(&#x27;2d&#x27;);<br>  const gs = $cSpec.getContext(&#x27;2d&#x27;);<br>  let running = false;</p>
-<p>  // Audio context &amp; graph<br>  let ac = null;<br>  let analyser = null; // For spectrum only<br>  let port = null;     // Worklet port for raw samples<br>  let sampleRate = 48000;</p>
-<p>  // Ring buffer for waveform up to 5s (mono)<br>  let winSec = parseFloat($win.value);<br>  let ring = new Float32Array(Math.max(1, Math.floor(winSec * sampleRate)));<br>  let wptr = 0, filled = false;</p>
-<p>  function resizeRing(seconds) {<br>    winSec = seconds;<br>    const newN = Math.max(1, Math.floor(winSec * sampleRate));<br>    const out = new Float32Array(newN);<br>    // take last newN samples from existing ring<br>    const current = readAll();<br>    const slice = current.length &gt; newN ? current.subarray(current.length - newN) : current;<br>    out.set(slice, newN - slice.length);<br>    ring = out; wptr = newN; filled = slice.length === newN;<br>  }</p>
-<p>  function writeRing(frame) {<br>    const n = frame.length;<br>    if (n &gt;= ring.length) {<br>      ring.set(frame.subarray(n - ring.length));<br>      wptr = 0; filled = true; return;<br>    }<br>    const end = wptr + n;<br>    if (end &lt; ring.length) {<br>      ring.set(frame, wptr); wptr = end;<br>    } else {<br>      const p1 = ring.length - wptr;<br>      ring.set(frame.subarray(0, p1), wptr);<br>      ring.set(frame.subarray(p1), 0);<br>      wptr = (end % ring.length); filled = true;<br>    }<br>  }</p>
-<p>  function readAll() {<br>    if (!filled) return ring.subarray(0, wptr);<br>    const idx = new Float32Array(ring.length);<br>    // reconstruct ordered view<br>    const out = new Float32Array(ring.length);<br>    out.set(ring.subarray(wptr));<br>    out.set(ring.subarray(0, wptr), ring.length - wptr);<br>    return out;<br>  }</p>
-<p>  // Drawing helpers<br>  function clear(ctx) {<br>    const c = ctx.canvas; ctx.clearRect(0, 0, c.width, c.height);<br>    ctx.fillStyle = &#x27;#0a0f14&#x27;; ctx.fillRect(0,0,c.width,c.height);<br>  }<br>  function drawGrid(ctx, xTicks=8, yTicks=4) {<br>    const {width:W, height:H} = ctx.canvas;<br>    ctx.strokeStyle = &#x27;#22303c&#x27;; ctx.lineWidth = 1;<br>    ctx.globalAlpha = 0.9; ctx.beginPath();<br>    for (let i=1;i&lt;xTicks;i++){ const x = (W*i)/xTicks; ctx.moveTo(x,0); ctx.lineTo(x,H);} <br>    for (let j=1;j&lt;yTicks;j++){ const y = (H*j)/yTicks; ctx.moveTo(0,y); ctx.lineTo(W,y);} <br>    ctx.stroke(); ctx.globalAlpha = 1;<br>  }<br>  function drawAxesLabel(ctx, labelL, labelB) {<br>    ctx.fillStyle = &#x27;#8894a3&#x27;; ctx.font = &#x27;12px system-ui, -apple-system, Segoe UI, Roboto&#x27;;<br>    ctx.fillText(labelL, 10, 16);<br>    ctx.fillText(labelB, 10, ctx.canvas.height - 8);<br>  }</p>
-<p>  function drawWave() {<br>    const {width:W, height:H} = gw.canvas;<br>    clear(gw); drawGrid(gw, 10, 4); drawAxesLabel(gw, &#x27;Amplitude&#x27;, `Time (last ${winSec.toFixed(3)} s)`);<br>    const y = readAll(); if (!y.length) return;<br>    gw.strokeStyle = &#x27;#8ab4ff&#x27;; gw.lineWidth = 1.5; gw.beginPath();<br>    const N = y.length; const step = Math.max(1, Math.floor(N / W));<br>    // downsample with min/max envelope to preserve peaks<br>    let x = 0; let i = Math.max(0, N - W * step);<br>    const mid = H * 0.5; const scale = H * 0.45; <br>    while (i &lt; N) {<br>      const j = Math.min(i + step, N);<br>      let minv = 1e9, maxv = -1e9;<br>      for (let k=i; k&lt;j; k++){ const v=y[k]; if (v&lt;minv) minv=v; if (v&gt;maxv) maxv=v; }<br>      const y1 = mid - minv * scale; const y2 = mid - maxv * scale;<br>      gw.moveTo(x, y1); gw.lineTo(x, y2);<br>      x += 1; i = j;<br>    }<br>    gw.stroke();<br>  }</p>
-<p>  function drawSpec() {<br>    if (!analyser) return;<br>    const {width:W, height:H} = gs.canvas;<br>    clear(gs); drawGrid(gs, 10, 4); drawAxesLabel(gs, &#x27;Magnitude&#x27;, &#x27;Frequency (Hz)&#x27;);<br>    const N = analyser.frequencyBinCount;<br>    const arr = new Float32Array(N);<br>    analyser.getFloatFrequencyData(arr); // dB values<br>    // Normalize to 0..1<br>    let min = Infinity, max = -Infinity;<br>    for (let i=0;i&lt;N;i++){ const v=arr[i]; if (v&lt;min) min=v; if (v&gt;max) max=v; }<br>    const range = (max-min) || 1;<br>    gs.strokeStyle = &#x27;#8ab4ff&#x27;; gs.lineWidth = 1.2; gs.beginPath();<br>    for (let x=0; x&lt;W; x++){<br>      const idx = Math.floor(x * N / W);<br>      const v = (arr[idx]-min)/range; // 0..1<br>      const y = H - v * (H*0.9) - H*0.05;<br>      if (x===0) gs.moveTo(0,y); else gs.lineTo(x,y);<br>    }<br>    gs.stroke();<br>    // Nyquist label<br>    gs.fillStyle = &#x27;#8894a3&#x27;; gs.font = &#x27;12px system-ui, -apple-system, Segoe UI, Roboto&#x27;;<br>    gs.fillText(`FFT Size: ${analyser.fftSize} · Fs: ${Math.round(sampleRate)} Hz · Nyquist: ${Math.round(sampleRate/2)} Hz`, 10, 16);<br>  }</p>
-<p>  function fitCanvas(c){<br>    const dpr = Math.max(1, window.devicePixelRatio || 1);<br>    const rect = c.getBoundingClientRect();<br>    const W = Math.max(200, Math.floor(rect.width * dpr));<br>    const H = Math.max(150, Math.floor(rect.height * dpr));<br>    if (c.width !== W || c.height !== H){ c.width = W; c.height = H; }<br>  }</p>
-<p>  let rafId = 0;<br>  function loop(){<br>    fitCanvas($cWave); fitCanvas($cSpec);<br>    drawWave(); drawSpec();<br>    rafId = requestAnimationFrame(loop);<br>  }</p>
-<p>  async function start(){<br>    if (running) return;<br>    try {<br>      $status.textContent = &#x27;状态：初始化音频…&#x27;;<br>      ac = new (window.AudioContext || window.webkitAudioContext)();<br>      sampleRate = ac.sampleRate || 48000;</p>
-<p>      // Create worklet from inline blob (single-file)<br>      const proc = `class MicTap extends AudioWorkletProcessor {\n  constructor(){ super(); }\n  process(inputs){\n    const ch0 = (inputs[0] &amp;&amp; inputs[0][0]) ? inputs[0][0] : null;\n    if (ch0) this.port.postMessage(ch0);\n    return true;\n  }\n}\nregisterProcessor(&#x27;mic-tap&#x27;, MicTap);`;<br>      const blob = new Blob([proc], {type:&#x27;application/javascript&#x27;});<br>      const url = URL.createObjectURL(blob);<br>      await ac.audioWorklet.addModule(url);</p>
-<p>      const stream = await navigator.mediaDevices.getUserMedia({audio:true});<br>      const src = ac.createMediaStreamSource(stream);</p>
-<p>      // Spectrum<br>      analyser = ac.createAnalyser();<br>      analyser.fftSize = 16384; // power of two &lt;= 32768; good compromise<br>      analyser.smoothingTimeConstant = 0.85;</p>
-<p>      // Worklet to capture raw samples for our ring buffer (waveform)<br>      const tap = new AudioWorkletNode(ac, &#x27;mic-tap&#x27;);<br>      port = tap.port; port.onmessage = (ev) =&gt; { writeRing(ev.data); };</p>
-<p>      // Wire graph: mic -&gt; [analyser, tap] (not to destination)<br>      src.connect(analyser);<br>      src.connect(tap);</p>
-<p>      // Init ring for selected window<br>      resizeRing(parseFloat($win.value));</p>
-<p>      // UI<br>      running = true; $btn.textContent = &#x27;停止&#x27;; $status.textContent = `状态：运行中 · 采样率 ${Math.round(sampleRate)} Hz`;<br>      loop();<br>    } catch (err) {<br>      console.error(err);<br>      $status.textContent = &#x27;错误：&#x27; + (err &amp;&amp; err.message ? err.message : err);<br>      running = false; cancelAnimationFrame(rafId);<br>    }<br>  }</p>
-<p>  function stop(){<br>    running = false; cancelAnimationFrame(rafId);<br>    if (ac) { ac.close().catch(()=&gt;{}); ac = null; }<br>    analyser = null; port = null;<br>    $btn.textContent = &#x27;开始采集&#x27;;<br>    $status.textContent = &#x27;状态：已停止。&#x27;;<br>  }</p>
-<p>  $btn.addEventListener(&#x27;click&#x27;, () =&gt; running ? stop() : start());<br>  $win.addEventListener(&#x27;change&#x27;, () =&gt; {<br>    const s = parseFloat($win.value || &#x27;0.05&#x27;);<br>    resizeRing(s);<br>  });</p>
-<p>  // Resize handling<br>  const ro = new ResizeObserver(() =&gt; { if (running) { fitCanvas($cWave); fitCanvas($cSpec); } });<br>  ro.observe($cWave); ro.observe($cSpec);<br>})();<br>&lt;/script&gt;<br>&lt;/body&gt;<br>&lt;/html&gt;</p>
+  <div class="wrap">
+    <div class="title">🎤 Mic Waveform <small>实时波形/频谱 · 可调时间窗（Web版）</small></div>
 
-</body></html>
+    <div class="bar">
+      <label>时间窗：</label>
+      <select id="windowSel">
+        <option value="0.020">20 ms</option>
+        <option value="0.050" selected>50 ms</option>
+        <option value="0.100">100 ms</option>
+        <option value="0.200">200 ms</option>
+        <option value="0.500">500 ms</option>
+        <option value="1.0">1 s</option>
+        <option value="2.0">2 s</option>
+        <option value="5.0">5 s</option>
+      </select>
+      <button id="btnStart" class="primary">开始采集</button>
+      <button id="btnStop" disabled>停止</button>
+      <span id="status" class="meta">未启动</span>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div id="timePlot" style="width:100%;height:360px"></div>
+      </div>
+      <div class="card">
+        <div id="freqPlot" style="width:100%;height:360px"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      说明：浏览器端实现，使用 <code>Web Audio API</code> 采集麦克风，Plotly 绘图。HTTPS 环境（含 GitHub Pages）下才能访问麦克风权限。
+      如果没有声音或频谱，请检查浏览器权限设置与是否使用了耳机麦克风。
+    </div>
+
+    <div class="meta" id="info"></div>
+  </div>
+
+<script>
+  // ===== Helpers =====
+  function nextPow2(n){ return n<=1?1:1<< (Math.ceil(Math.log2(n))); }
+
+  // ===== State =====
+  let audioCtx, analyser, micSource, mediaStream;
+  let running = false;
+  let sampleRate = 48000;
+  let ring = new Float32Array(48000 * 0.05); // default 50 ms
+  let writePtr = 0, filled = false;
+
+  function setWindowSec(sec){
+    const newN = Math.max(1, Math.floor(sec * sampleRate));
+    const old = getOrderedBuffer();
+    const keep = old.slice(Math.max(0, old.length - newN));
+    ring = new Float32Array(newN);
+    ring.set(keep, newN - keep.length);
+    writePtr = newN; filled = (keep.length === newN);
+  }
+
+  function writeRing(data){
+    const N = ring.length;
+    let n = data.length;
+    let end = writePtr + n;
+    if(end < N){
+      ring.set(data, writePtr);
+      writePtr = end;
+    } else {
+      const part1 = N - writePtr;
+      ring.set(data.subarray(0, part1), writePtr);
+      ring.set(data.subarray(part1), 0);
+      writePtr = end % N; filled = true;
+    }
+  }
+
+  function getOrderedBuffer(){
+    const N = ring.length;
+    if(!filled){ return ring.slice(0, writePtr); }
+    const out = new Float32Array(N);
+    out.set(ring.subarray(writePtr));
+    out.set(ring.subarray(0, writePtr), N - writePtr);
+    return out;
+  }
+
+  // ===== Plot setup =====
+  const timeLayout = {
+    margin:{l:50,r:15,t:20,b:40}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+    xaxis:{ title:'Time (s)', zeroline:false, gridcolor:'rgba(255,255,255,0.1)' },
+    yaxis:{ title:'Amplitude', zeroline:false, gridcolor:'rgba(255,255,255,0.1)', range:[-1,1] },
+  };
+  const freqLayout = {
+    margin:{l:60,r:15,t:20,b:40}, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+    xaxis:{ title:'Frequency (Hz)', zeroline:false, gridcolor:'rgba(255,255,255,0.1)' },
+    yaxis:{ title:'Magnitude (dB)', zeroline:false, gridcolor:'rgba(255,255,255,0.1)' },
+  };
+
+  Plotly.newPlot('timePlot', [{x:[0,1], y:[0,0], mode:'lines'}], timeLayout, {displayModeBar:false});
+  Plotly.newPlot('freqPlot', [{x:[0,1], y:[0,0], mode:'lines'}], freqLayout, {displayModeBar:false});
+
+  function updateTimePlot(){
+    const y = getOrderedBuffer();
+    const len = y.length;
+    if(len < 2) return;
+    const x = new Float32Array(len);
+    for(let i=0;i<len;i++){ x[i] = (i-len)/sampleRate; }
+    Plotly.update('timePlot', {x:[Array.from(x)], y:[Array.from(y)]});
+    const sec = len / sampleRate;
+    Plotly.relayout('timePlot', {'xaxis.range':[ -sec, 0 ]});
+  }
+
+  function updateFreqPlot(){
+    if(!analyser) return;
+    const nfft = analyser.fftSize; // power of 2
+    const buf = new Float32Array(analyser.frequencyBinCount);
+    analyser.getFloatFrequencyData(buf); // dB values
+
+    // X axis (frequency)
+    const nyquist = sampleRate / 2;
+    const freqs = new Float32Array(buf.length);
+    const step = nyquist / (buf.length - 1);
+    for(let i=0;i<freqs.length;i++) freqs[i] = i*step;
+
+    // Optional: limit to 6 kHz like desktop demo
+    const limit = 6000; // Hz
+    let limitIdx = Math.min(buf.length, Math.floor(limit/step));
+    if(limitIdx < 8) limitIdx = buf.length;
+
+    Plotly.update('freqPlot', {
+      x:[Array.from(freqs.slice(0, limitIdx))],
+      y:[Array.from(buf.slice(0, limitIdx))]
+    });
+    Plotly.relayout('freqPlot', {'xaxis.range':[0, Math.min(nyquist, limit)]});
+  }
+
+  // ===== Audio pipeline =====
+  async function start(){
+    if(running) return;
+    try{
+      mediaStream = await navigator.mediaDevices.getUserMedia({audio:true});
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      sampleRate = audioCtx.sampleRate;
+
+      // resize ring for current sampleRate
+      const winSec = parseFloat(document.getElementById('windowSel').value);
+      setWindowSec(winSec);
+
+      micSource = audioCtx.createMediaStreamSource(mediaStream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 16384;   // Max FFT size similar to desktop
+      analyser.smoothingTimeConstant = 0.6; // mild smoothing
+
+      // A processor to fetch time-domain PCM for our own ring buffer
+      const proc = audioCtx.createScriptProcessor(2048, 1, 1);
+      micSource.connect(proc);
+      proc.connect(audioCtx.destination); // required in some browsers
+      micSource.connect(analyser);
+
+      proc.onaudioprocess = (ev)=>{
+        const ch = ev.inputBuffer.getChannelData(0);
+        // Copy to avoid referencing the same buffer next callback
+        writeRing(new Float32Array(ch));
+      };
+
+      running = true;
+      document.getElementById('btnStart').disabled = true;
+      document.getElementById('btnStop').disabled = false;
+      setStatus(`采样率: ${sampleRate} Hz | FFT: ${analyser.fftSize} | 窗口: ${ring.length/sampleRate}s`);
+
+      // animation loop
+      const loop = ()=>{
+        if(!running) return;
+        updateTimePlot();
+        updateFreqPlot();
+        requestAnimationFrame(loop);
+      };
+      loop();
+    }catch(err){
+      setStatus('无法访问麦克风：' + err.message, true);
+      console.error(err);
+    }
+  }
+
+  function stop(){
+    running = false;
+    try{ if(mediaStream){ mediaStream.getTracks().forEach(t=>t.stop()); } }catch{}
+    try{ if(audioCtx){ audioCtx.close(); } }catch{}
+    mediaStream = null; audioCtx = null; analyser = null; micSource = null;
+    document.getElementById('btnStart').disabled = false;
+    document.getElementById('btnStop').disabled = true;
+    setStatus('已停止');
+  }
+
+  function setStatus(msg, warn=false){
+    const el = document.getElementById('status');
+    el.textContent = msg; el.className = 'meta' + (warn? ' warn':'' );
+    document.getElementById('info').textContent = msg;
+  }
+
+  // ===== UI wires =====
+  document.getElementById('btnStart').addEventListener('click', start);
+  document.getElementById('btnStop').addEventListener('click', stop);
+  document.getElementById('windowSel').addEventListener('change', (e)=>{
+    const sec = parseFloat(e.target.value);
+    setWindowSec(sec);
+    if(running) setStatus(`采样率: ${sampleRate} Hz | FFT: ${analyser?analyser.fftSize:'-'} | 窗口: ${sec}s`);
+  });
+</script>
+</body>
+</html>
