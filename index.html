@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mic Waveform · 实时波形/频谱 · 可调时间窗（Web版）</title>
+  <title>Mic Waveform · Real-time Waveform/Spectrum · Adjustable Time Window (Web)</title>
   <!-- Plotly CDN -->
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
@@ -42,10 +42,10 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="title">🎤 Mic Waveform <small>实时波形/频谱 · 可调时间窗（Web版）</small></div>
+    <div class="title">🎤 Mic Waveform <small>Real-time Waveform / Spectrum · Adjustable Time Window (Web)</small></div>
 
     <div class="bar">
-      <label>时间窗：</label>
+      <label>Time Window:</label>
       <select id="windowSel">
         <option value="0.020">20 ms</option>
         <option value="0.050" selected>50 ms</option>
@@ -56,9 +56,9 @@
         <option value="2.0">2 s</option>
         <option value="5.0">5 s</option>
       </select>
-      <button id="btnStart" class="primary">开始采集</button>
-      <button id="btnStop" disabled>停止</button>
-      <span id="status" class="meta">未启动</span>
+      <button id="btnStart" class="primary">Start</button>
+      <button id="btnStop" disabled>Stop</button>
+      <span id="status" class="meta">Not Started</span>
     </div>
 
     <div class="grid">
@@ -71,8 +71,9 @@
     </div>
 
     <div class="footer">
-      说明：浏览器端实现，使用 <code>Web Audio API</code> 采集麦克风，Plotly 绘图。HTTPS 环境（含 GitHub Pages）下才能访问麦克风权限。
-      如果没有声音或频谱，请检查浏览器权限设置与是否使用了耳机麦克风。
+      Note: Runs fully in the browser using <code>Web Audio API</code> for microphone input and Plotly for plotting.  
+      Microphone access requires an HTTPS environment (e.g., GitHub Pages).  
+      If you see no signal or spectrum, please check browser permissions or ensure your microphone (e.g., headset mic) is active.
     </div>
 
     <div class="meta" id="info"></div>
@@ -196,7 +197,7 @@
 
       micSource = audioCtx.createMediaStreamSource(mediaStream);
       analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 16384;   // Max FFT size similar to desktop
+      analyser.fftSize = 16384;   // Max FFT size
       analyser.smoothingTimeConstant = 0.6; // mild smoothing
 
       // A processor to fetch time-domain PCM for our own ring buffer
@@ -210,7 +211,7 @@
           writeRing(new Float32Array(ch));
         };
       } else {
-        // Fallback: use getUserMedia + analyser.getFloatTimeDomainData in RAF loop
+        // Fallback: use analyser.getFloatTimeDomainData in RAF loop
         micSource.connect(analyser);
         setInterval(()=>{
           const td = new Float32Array(analyser.fftSize);
@@ -227,7 +228,7 @@
       running = true;
       document.getElementById('btnStart').disabled = true;
       document.getElementById('btnStop').disabled = false;
-      setStatus(`采样率: ${sampleRate} Hz | FFT: ${analyser.fftSize} | 窗口: ${ring.length/sampleRate}s`);
+      setStatus(`Sample Rate: ${sampleRate} Hz | FFT: ${analyser.fftSize} | Window: ${ring.length/sampleRate}s`);
 
       // animation loop
       const loop = ()=>{
@@ -238,7 +239,7 @@
       };
       loop();
     }catch(err){
-      setStatus('无法访问麦克风：' + err.message, true);
+      setStatus('Microphone access failed: ' + err.message, true);
       console.error(err);
     }
   }
@@ -250,7 +251,7 @@
     mediaStream = null; audioCtx = null; analyser = null; micSource = null;
     document.getElementById('btnStart').disabled = false;
     document.getElementById('btnStop').disabled = true;
-    setStatus('已停止');
+    setStatus('Stopped');
   }
 
   function setStatus(msg, warn=false){
@@ -265,7 +266,7 @@
   document.getElementById('windowSel').addEventListener('change', (e)=>{
     const sec = parseFloat(e.target.value);
     setWindowSec(sec);
-    if(running) setStatus(`采样率: ${sampleRate} Hz | FFT: ${analyser?analyser.fftSize:'-'} | 窗口: ${sec}s`);
+    if(running) setStatus(`Sample Rate: ${sampleRate} Hz | FFT: ${analyser?analyser.fftSize:'-'} | Window: ${sec}s`);
   });
 </script>
 </body>
